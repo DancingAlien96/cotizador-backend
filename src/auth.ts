@@ -4,8 +4,10 @@ import { env } from "./env";
 
 const TOKEN_TTL = "7d";
 
-export function signToken(subject: string): string {
-  return jwt.sign({ sub: subject }, env.jwtSecret, { expiresIn: TOKEN_TTL });
+export function signToken(user: { id: string; email: string }): string {
+  return jwt.sign({ sub: user.id, email: user.email }, env.jwtSecret, {
+    expiresIn: TOKEN_TTL,
+  });
 }
 
 // Middleware: exige un JWT válido en el header Authorization: Bearer <token>.
