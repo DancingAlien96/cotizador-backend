@@ -3,6 +3,7 @@ import cors from "cors";
 import { env } from "./env";
 import { authRouter } from "./routes/auth";
 import { cotizacionesRouter } from "./routes/cotizaciones";
+import { historialRouter } from "./routes/historial";
 import { usersRouter } from "./routes/users";
 
 const app = express();
@@ -17,6 +18,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/users", usersRouter);
+app.use("/api/historial", historialRouter);
 app.use("/api/cotizaciones", cotizacionesRouter);
 
 // Manejo de errores

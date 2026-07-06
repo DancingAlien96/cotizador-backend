@@ -22,11 +22,16 @@ model Cotizacion {
   id        String         @id @default(uuid())
   tipo      TipoCotizacion
   numero    String?
+  // Campos de resumen para el historial (listado ligero, sin traer `data`).
+  cliente   String?
+  total     Float?
+  fecha     String?
   data      Json
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
   @@index([tipo, updatedAt])
+  @@index([updatedAt])
 }
 
 // Secuencia de folios por tipo (para numeración autogenerada).

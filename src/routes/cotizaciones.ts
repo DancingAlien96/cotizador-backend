@@ -59,11 +59,17 @@ cotizacionesRouter.post("/:tipo", async (req, res) => {
     res.status(400).json({ error: "Tipo de cotización inválido." });
     return;
   }
-  const { id, data } = req.body ?? {};
+  const { id, data, cliente, total, fecha } = req.body ?? {};
   if (data === undefined || data === null) {
     res.status(400).json({ error: "Falta el campo 'data'." });
     return;
   }
+
+  const resumen = {
+    cliente: cliente != null ? String(cliente) : null,
+    total: total != null && !Number.isNaN(Number(total)) ? Number(total) : null,
+    fecha: fecha != null ? String(fecha) : null,
+  };
 
   // Actualización
   if (id) {
@@ -71,7 +77,7 @@ cotizacionesRouter.post("/:tipo", async (req, res) => {
     if (existing && existing.tipo === tipo) {
       const updated = await prisma.cotizacion.update({
         where: { id },
-        data: { data: data as Prisma.InputJsonValue },
+        data: { data: data as Prisma.InputJsonValue, ...resumen },
       });
       res.json(updated);
       return;
@@ -90,7 +96,7 @@ cotizacionesRouter.post("/:tipo", async (req, res) => {
       numero = formatNumero(counter.seq);
     }
     return tx.cotizacion.create({
-      data: { tipo, numero, data: data as Prisma.InputJsonValue },
+      data: { tipo, numero, data: data as Prisma.InputJsonValue, ...resumen },
     });
   });
 
