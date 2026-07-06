@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cotizador-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cotizador
+      POSTGRES_PASSWORD: cotizador
+      POSTGRES_DB: cotizador
+    ports:
+      # 5433 en el host para no chocar con un PostgreSQL local en 5432
+      - "5433:5432"
+    volumes:
+      - cotizador_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cotizador -d cotizador"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  cotizador_pgdata:
