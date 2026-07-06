@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.env.*
+.git
+docker-compose.yml
+docker-compose.prod.yml
+*.md

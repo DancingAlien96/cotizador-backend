@@ -1,0 +1,55 @@
+# Producción: PostgreSQL + backend + frontend.
+# Requiere que el repo del frontend esté clonado como carpeta hermana `cotizador`.
+# Layout esperado:
+#   /ruta/cotizador            (frontend)
+#   /ruta/cotizador-backend    (este repo, aquí se corre el compose)
+#
+# Uso:
+#   cp .env.prod.example .env   # y completar los valores
+#   docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      PORT: 4000
+      CORS_ORIGIN: ${FRONTEND_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ../cotizador
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:4000
+      JWT_SECRET: ${JWT_SECRET}
+      NODE_ENV: production
+    depends_on:
+      - backend
+    ports:
+      # Publica solo el frontend (ponlo detrás de un reverse proxy con HTTPS)
+      - "3000:3000"
+
+volumes:
+  pgdata:
