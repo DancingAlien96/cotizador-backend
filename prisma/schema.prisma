@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TipoCotizacion {
+  TIENDA
+  GUATECOMPRAS
+  EMPRESAS
+  CARTA
+  PISCINA
+}
+
+// Una cotización de cualquier tipo. `data` guarda el JSON con la forma que
+// maneja el frontend para ese tipo. `numero` es el folio (p. ej. empresas).
+model Cotizacion {
+  id        String         @id @default(uuid())
+  tipo      TipoCotizacion
+  numero    String?
+  data      Json
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([tipo, updatedAt])
+}
+
+// Secuencia de folios por tipo (para numeración autogenerada).
+model Counter {
+  tipo TipoCotizacion @id
+  seq  Int            @default(0)
+}
+
+// Usuarios (para autenticación real más adelante).
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  nombre    String?
+  createdAt DateTime @default(now())
+}
