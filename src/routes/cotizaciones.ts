@@ -59,13 +59,15 @@ cotizacionesRouter.post("/:tipo", async (req, res) => {
     res.status(400).json({ error: "Tipo de cotización inválido." });
     return;
   }
-  const { id, data, cliente, total, fecha } = req.body ?? {};
+  const { id, data, nombre, autor, cliente, total, fecha } = req.body ?? {};
   if (data === undefined || data === null) {
     res.status(400).json({ error: "Falta el campo 'data'." });
     return;
   }
 
   const resumen = {
+    nombre: nombre != null ? String(nombre) : null,
+    autor: autor != null ? String(autor) : null,
     cliente: cliente != null ? String(cliente) : null,
     total: total != null && !Number.isNaN(Number(total)) ? Number(total) : null,
     fecha: fecha != null ? String(fecha) : null,

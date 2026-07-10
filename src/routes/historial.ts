@@ -26,6 +26,8 @@ historialRouter.get("/", async (req, res) => {
   if (tipo) where.tipo = tipo;
   if (q) {
     where.OR = [
+      { nombre: { contains: q, mode: "insensitive" } },
+      { autor: { contains: q, mode: "insensitive" } },
       { cliente: { contains: q, mode: "insensitive" } },
       { numero: { contains: q, mode: "insensitive" } },
     ];
@@ -41,6 +43,8 @@ historialRouter.get("/", async (req, res) => {
         id: true,
         tipo: true,
         numero: true,
+        nombre: true,
+        autor: true,
         cliente: true,
         total: true,
         fecha: true,

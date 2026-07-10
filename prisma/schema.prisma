@@ -22,7 +22,9 @@ model Cotizacion {
   id        String         @id @default(uuid())
   tipo      TipoCotizacion
   numero    String?
-  // Campos de resumen para el historial (listado ligero, sin traer `data`).
+  // Metadatos y resumen para el historial (listado ligero, sin traer `data`).
+  nombre    String?
+  autor     String?
   cliente   String?
   total     Float?
   fecha     String?
