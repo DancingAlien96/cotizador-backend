@@ -16,15 +16,19 @@ const TIPOS: Record<string, TipoCotizacion> = {
   piscina: TipoCotizacion.PISCINA,
 };
 
-// Tipos cuyo folio (numero) se autogenera secuencialmente.
-const TIPOS_CON_FOLIO = new Set<TipoCotizacion>([TipoCotizacion.EMPRESAS]);
+// Folio autogenerado: Tienda y Empresas comparten un mismo correlativo.
+const FOLIO_INICIAL = 1000;
+const CLAVE_FOLIO: Partial<Record<TipoCotizacion, string>> = {
+  [TipoCotizacion.TIENDA]: "cotizaciones",
+  [TipoCotizacion.EMPRESAS]: "cotizaciones",
+};
 
 function parseTipo(value: string): TipoCotizacion | null {
   return TIPOS[value.toLowerCase()] ?? null;
 }
 
 function formatNumero(seq: number): string {
-  return String(seq).padStart(4, "0");
+  return String(seq);
 }
 
 // GET /api/cotizaciones/:tipo -> lista
@@ -48,8 +52,15 @@ cotizacionesRouter.get("/:tipo/next-numero", async (req, res) => {
     res.status(400).json({ error: "Tipo de cotización inválido." });
     return;
   }
-  const counter = await prisma.counter.findUnique({ where: { tipo } });
-  res.json({ numero: formatNumero((counter?.seq ?? 0) + 1) });
+  const clave = CLAVE_FOLIO[tipo];
+  if (!clave) {
+    res.json({ numero: "" });
+    return;
+  }
+  const counter = await prisma.counter.findUnique({ where: { clave } });
+  res.json({
+    numero: formatNumero(counter ? counter.seq + 1 : FOLIO_INICIAL),
+  });
 });
 
 // POST /api/cotizaciones/:tipo  { id?, data } -> cotización guardada
@@ -89,10 +100,11 @@ cotizacionesRouter.post("/:tipo", async (req, res) => {
   // Creación (con folio si aplica, en una transacción para evitar colisiones)
   const created = await prisma.$transaction(async (tx) => {
     let numero: string | null = null;
-    if (TIPOS_CON_FOLIO.has(tipo)) {
+    const clave = CLAVE_FOLIO[tipo];
+    if (clave) {
       const counter = await tx.counter.upsert({
-        where: { tipo },
-        create: { tipo, seq: 1 },
+        where: { clave },
+        create: { clave, seq: FOLIO_INICIAL },
         update: { seq: { increment: 1 } },
       });
       numero = formatNumero(counter.seq);

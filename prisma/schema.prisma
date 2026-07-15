@@ -36,10 +36,11 @@ model Cotizacion {
   @@index([updatedAt])
 }
 
-// Secuencia de folios por tipo (para numeración autogenerada).
+// Secuencia de folios. `clave` permite compartir un correlativo entre varios
+// tipos (p. ej. "cotizaciones" para Tienda y Empresas).
 model Counter {
-  tipo TipoCotizacion @id
-  seq  Int            @default(0)
+  clave String @id
+  seq   Int    @default(0)
 }
 
 // Usuarios (para autenticación real más adelante).
