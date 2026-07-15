@@ -49,6 +49,24 @@ model Cotizacion {
   @@index([estado, updatedAt])
 }
 
+// Cliente reutilizable: se guarda una vez y autocompleta las cotizaciones.
+// Cada formato usa los campos que le sirven (Tienda toma nombre y NIT,
+// Guatecompras nombre y dirección, Piscina nombre y ubicación, etc.).
+model Cliente {
+  id        String   @id @default(uuid())
+  nombre    String   @unique
+  nit       String?
+  direccion String?
+  telefono  String?
+  correo    String?
+  contacto  String?
+  notas     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([nombre])
+}
+
 // Secuencia de folios. `clave` permite compartir un correlativo entre varios
 // tipos (p. ej. "cotizaciones" para Tienda y Empresas).
 model Counter {
