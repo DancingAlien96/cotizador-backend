@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { Prisma, TipoCotizacion } from "@prisma/client";
+import { EstadoCotizacion, Prisma, TipoCotizacion } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireAuth } from "../auth";
 
@@ -23,8 +23,19 @@ const CLAVE_FOLIO: Partial<Record<TipoCotizacion, string>> = {
   [TipoCotizacion.EMPRESAS]: "cotizaciones",
 };
 
+const ESTADOS: Record<string, EstadoCotizacion> = {
+  pendiente: EstadoCotizacion.PENDIENTE,
+  en_curso: EstadoCotizacion.EN_CURSO,
+  confirmada: EstadoCotizacion.CONFIRMADA,
+  rechazada: EstadoCotizacion.RECHAZADA,
+};
+
 function parseTipo(value: string): TipoCotizacion | null {
   return TIPOS[value.toLowerCase()] ?? null;
+}
+
+function parseEstado(value: unknown): EstadoCotizacion | null {
+  return ESTADOS[String(value ?? "").toLowerCase()] ?? null;
 }
 
 function formatNumero(seq: number): string {
@@ -115,6 +126,40 @@ cotizacionesRouter.post("/:tipo", async (req, res) => {
   });
 
   res.status(201).json(created);
+});
+
+// PATCH /api/cotizaciones/:tipo/:id/estado  { estado, motivoRechazo? }
+cotizacionesRouter.patch("/:tipo/:id/estado", async (req, res) => {
+  const tipo = parseTipo(req.params.tipo);
+  if (!tipo) {
+    res.status(400).json({ error: "Tipo de cotización inválido." });
+    return;
+  }
+  const estado = parseEstado(req.body?.estado);
+  if (!estado) {
+    res.status(400).json({ error: "Estado inválido." });
+    return;
+  }
+  // El motivo solo tiene sentido en una cotización rechazada; al salir de
+  // RECHAZADA se limpia para no dejar un motivo huérfano.
+  const motivoRechazo =
+    estado === EstadoCotizacion.RECHAZADA
+      ? String(req.body?.motivoRechazo ?? "").trim() || null
+      : null;
+
+  const { count } = await prisma.cotizacion.updateMany({
+    where: { id: req.params.id, tipo },
+    data: { estado, motivoRechazo, estadoAt: new Date() },
+  });
+  if (count === 0) {
+    res.status(404).json({ error: "Cotización no encontrada." });
+    return;
+  }
+  const updated = await prisma.cotizacion.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, estado: true, motivoRechazo: true, estadoAt: true },
+  });
+  res.json(updated);
 });
 
 // DELETE /api/cotizaciones/:tipo/:id

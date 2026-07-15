@@ -16,24 +16,37 @@ enum TipoCotizacion {
   PISCINA
 }
 
+// Etapa de seguimiento de la cotización (el "pipeline" del CRM).
+enum EstadoCotizacion {
+  PENDIENTE
+  EN_CURSO
+  CONFIRMADA
+  RECHAZADA
+}
+
 // Una cotización de cualquier tipo. `data` guarda el JSON con la forma que
 // maneja el frontend para ese tipo. `numero` es el folio (p. ej. empresas).
 model Cotizacion {
-  id        String         @id @default(uuid())
-  tipo      TipoCotizacion
-  numero    String?
+  id            String           @id @default(uuid())
+  tipo          TipoCotizacion
+  numero        String?
   // Metadatos y resumen para el historial (listado ligero, sin traer `data`).
-  nombre    String?
-  autor     String?
-  cliente   String?
-  total     Float?
-  fecha     String?
-  data      Json
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  nombre        String?
+  autor         String?
+  cliente       String?
+  total         Float?
+  fecha         String?
+  // Seguimiento CRM. `motivoRechazo` solo aplica cuando estado = RECHAZADA.
+  estado        EstadoCotizacion @default(PENDIENTE)
+  motivoRechazo String?
+  estadoAt      DateTime         @default(now())
+  data          Json
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   @@index([tipo, updatedAt])
   @@index([updatedAt])
+  @@index([estado, updatedAt])
 }
 
 // Secuencia de folios. `clave` permite compartir un correlativo entre varios
