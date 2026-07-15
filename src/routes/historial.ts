@@ -21,6 +21,60 @@ const ESTADOS: Record<string, EstadoCotizacion> = {
   rechazada: EstadoCotizacion.RECHAZADA,
 };
 
+// Días sin movimiento tras los cuales una cotización se considera estancada.
+const DIAS_ESTANCADA = 15;
+
+const RESUMEN = {
+  id: true,
+  tipo: true,
+  numero: true,
+  nombre: true,
+  autor: true,
+  cliente: true,
+  total: true,
+  fecha: true,
+  estado: true,
+  motivoRechazo: true,
+  estadoAt: true,
+  seguimientoAt: true,
+  updatedAt: true,
+} as const;
+
+// Solo se da seguimiento a lo que sigue vivo: una confirmada o rechazada ya
+// no necesita recordatorio.
+const ABIERTAS = [EstadoCotizacion.PENDIENTE, EstadoCotizacion.EN_CURSO];
+
+// GET /api/historial/alertas
+// Cotizaciones que piden atención hoy, en dos grupos que no se traslapan:
+//  - vencidas:   tienen recordatorio puesto y ya llegó la fecha
+//  - estancadas: sin recordatorio y llevan DIAS_ESTANCADA sin cambiar de estado
+historialRouter.get("/alertas", async (_req, res) => {
+  const ahora = new Date();
+  const limite = new Date(ahora.getTime() - DIAS_ESTANCADA * 86400_000);
+
+  const [vencidas, estancadas] = await Promise.all([
+    prisma.cotizacion.findMany({
+      where: {
+        estado: { in: ABIERTAS },
+        seguimientoAt: { not: null, lte: ahora },
+      },
+      orderBy: { seguimientoAt: "asc" },
+      select: RESUMEN,
+    }),
+    prisma.cotizacion.findMany({
+      where: {
+        estado: { in: ABIERTAS },
+        seguimientoAt: null,
+        estadoAt: { lte: limite },
+      },
+      orderBy: { estadoAt: "asc" },
+      select: RESUMEN,
+    }),
+  ]);
+
+  res.json({ vencidas, estancadas, dias: DIAS_ESTANCADA });
+});
+
 // GET /api/historial/tablero?tipo=&q=
 // Todas las cotizaciones agrupadas por estado, para la vista Kanban. Cada
 // columna trae como máximo TABLERO_POR_COLUMNA tarjetas (las más recientes),
@@ -50,20 +104,7 @@ historialRouter.get("/tablero", async (req, res) => {
           where,
           orderBy: { estadoAt: "desc" },
           take: TABLERO_POR_COLUMNA,
-          select: {
-            id: true,
-            tipo: true,
-            numero: true,
-            nombre: true,
-            autor: true,
-            cliente: true,
-            total: true,
-            fecha: true,
-            estado: true,
-            motivoRechazo: true,
-            estadoAt: true,
-            updatedAt: true,
-          },
+          select: RESUMEN,
         }),
         prisma.cotizacion.aggregate({
           where,
@@ -110,20 +151,7 @@ historialRouter.get("/", async (req, res) => {
       orderBy: { updatedAt: "desc" },
       skip: offset,
       take: limit,
-      select: {
-        id: true,
-        tipo: true,
-        numero: true,
-        nombre: true,
-        autor: true,
-        cliente: true,
-        total: true,
-        fecha: true,
-        estado: true,
-        motivoRechazo: true,
-        estadoAt: true,
-        updatedAt: true,
-      },
+      select: RESUMEN,
     }),
     prisma.cotizacion.count({ where }),
   ]);

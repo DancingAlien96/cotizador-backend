@@ -162,6 +162,36 @@ cotizacionesRouter.patch("/:tipo/:id/estado", async (req, res) => {
   res.json(updated);
 });
 
+// PATCH /api/cotizaciones/:tipo/:id/seguimiento  { fecha: "2026-07-30" | null }
+// Programa (o quita, con null) el recordatorio de volver a contactar.
+cotizacionesRouter.patch("/:tipo/:id/seguimiento", async (req, res) => {
+  const tipo = parseTipo(req.params.tipo);
+  if (!tipo) {
+    res.status(400).json({ error: "Tipo de cotización inválido." });
+    return;
+  }
+  const raw = req.body?.fecha;
+  let seguimientoAt: Date | null = null;
+  if (raw != null && String(raw).trim() !== "") {
+    const d = new Date(String(raw));
+    if (Number.isNaN(d.getTime())) {
+      res.status(400).json({ error: "Fecha inválida." });
+      return;
+    }
+    seguimientoAt = d;
+  }
+
+  const { count } = await prisma.cotizacion.updateMany({
+    where: { id: req.params.id, tipo },
+    data: { seguimientoAt },
+  });
+  if (count === 0) {
+    res.status(404).json({ error: "Cotización no encontrada." });
+    return;
+  }
+  res.json({ id: req.params.id, seguimientoAt });
+});
+
 // DELETE /api/cotizaciones/:tipo/:id
 cotizacionesRouter.delete("/:tipo/:id", async (req, res) => {
   const tipo = parseTipo(req.params.tipo);

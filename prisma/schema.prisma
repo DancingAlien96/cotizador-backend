@@ -40,6 +40,8 @@ model Cotizacion {
   estado        EstadoCotizacion @default(PENDIENTE)
   motivoRechazo String?
   estadoAt      DateTime         @default(now())
+  // Recordatorio: fecha en que toca volver a contactar al cliente.
+  seguimientoAt DateTime?
   data          Json
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
