@@ -69,6 +69,20 @@ model Cliente {
   @@index([nombre])
 }
 
+// Frase reutilizable para el autocompletado. Se acumula al guardar
+// cotizaciones (descripciones, términos, observaciones) y se sugiere al
+// escribir. `usos` ordena las más frecuentes primero.
+model Frase {
+  id        String   @id @default(uuid())
+  campo     String
+  texto     String
+  usos      Int      @default(1)
+  updatedAt DateTime @updatedAt
+
+  @@unique([campo, texto])
+  @@index([campo, usos])
+}
+
 // Secuencia de folios. `clave` permite compartir un correlativo entre varios
 // tipos (p. ej. "cotizaciones" para Tienda y Empresas).
 model Counter {

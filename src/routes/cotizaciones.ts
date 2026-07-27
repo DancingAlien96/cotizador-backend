@@ -2,6 +2,7 @@ import { Router } from "express";
 import { EstadoCotizacion, Prisma, TipoCotizacion } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireAuth } from "../auth";
+import { registrarFrases } from "../frases";
 
 export const cotizacionesRouter = Router();
 
@@ -103,6 +104,7 @@ cotizacionesRouter.post("/:tipo", async (req, res) => {
         where: { id },
         data: { data: data as Prisma.InputJsonValue, ...resumen },
       });
+      await registrarFrases(tipo, data);
       res.json(updated);
       return;
     }
@@ -125,6 +127,7 @@ cotizacionesRouter.post("/:tipo", async (req, res) => {
     });
   });
 
+  await registrarFrases(tipo, data);
   res.status(201).json(created);
 });
 

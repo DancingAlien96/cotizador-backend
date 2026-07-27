@@ -3,6 +3,7 @@ import cors from "cors";
 import { env } from "./env";
 import { authRouter } from "./routes/auth";
 import { clientesRouter } from "./routes/clientes";
+import { frasesRouter } from "./routes/frases";
 import { cotizacionesRouter } from "./routes/cotizaciones";
 import { historialRouter } from "./routes/historial";
 import { reportesRouter } from "./routes/reportes";
@@ -22,6 +23,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/historial", historialRouter);
 app.use("/api/clientes", clientesRouter);
+app.use("/api/frases", frasesRouter);
 app.use("/api/reportes", reportesRouter);
 app.use("/api/cotizaciones", cotizacionesRouter);
 
