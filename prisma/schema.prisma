@@ -30,6 +30,9 @@ model Cotizacion {
   id            String           @id @default(uuid())
   tipo          TipoCotizacion
   numero        String?
+  // Versión actual. Las versiones anteriores se conservan como snapshots en
+  // VersionCotizacion; esta fila es siempre la versión viva (la más reciente).
+  version       Int              @default(1)
   // Metadatos y resumen para el historial (listado ligero, sin traer `data`).
   nombre        String?
   autor         String?
@@ -45,10 +48,30 @@ model Cotizacion {
   data          Json
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+  versiones     VersionCotizacion[]
 
   @@index([tipo, updatedAt])
   @@index([updatedAt])
   @@index([estado, updatedAt])
+}
+
+// Snapshot de una versión anterior de una cotización. Se crea al pulsar
+// "Guardar como nueva versión": la versión vieja se archiva aquí y la fila
+// Cotizacion pasa a ser la versión nueva.
+model VersionCotizacion {
+  id           String     @id @default(uuid())
+  cotizacionId String
+  cotizacion   Cotizacion @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
+  version      Int
+  nombre       String?
+  autor        String?
+  cliente      String?
+  total        Float?
+  fecha        String?
+  data         Json
+  createdAt    DateTime   @default(now())
+
+  @@index([cotizacionId, version])
 }
 
 // Cliente reutilizable: se guarda una vez y autocompleta las cotizaciones.

@@ -28,6 +28,7 @@ const RESUMEN = {
   id: true,
   tipo: true,
   numero: true,
+  version: true,
   nombre: true,
   autor: true,
   cliente: true,

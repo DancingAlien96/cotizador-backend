@@ -43,6 +43,18 @@ function formatNumero(seq: number): string {
   return String(seq);
 }
 
+// Resumen ligero para el historial, tomado del cuerpo de la petición.
+function construirResumen(body: Record<string, unknown>) {
+  const { nombre, autor, cliente, total, fecha } = body ?? {};
+  return {
+    nombre: nombre != null ? String(nombre) : null,
+    autor: autor != null ? String(autor) : null,
+    cliente: cliente != null ? String(cliente) : null,
+    total: total != null && !Number.isNaN(Number(total)) ? Number(total) : null,
+    fecha: fecha != null ? String(fecha) : null,
+  };
+}
+
 // GET /api/cotizaciones/:tipo -> lista
 cotizacionesRouter.get("/:tipo", async (req, res) => {
   const tipo = parseTipo(req.params.tipo);
@@ -82,19 +94,13 @@ cotizacionesRouter.post("/:tipo", async (req, res) => {
     res.status(400).json({ error: "Tipo de cotización inválido." });
     return;
   }
-  const { id, data, nombre, autor, cliente, total, fecha } = req.body ?? {};
+  const { id, data } = req.body ?? {};
   if (data === undefined || data === null) {
     res.status(400).json({ error: "Falta el campo 'data'." });
     return;
   }
 
-  const resumen = {
-    nombre: nombre != null ? String(nombre) : null,
-    autor: autor != null ? String(autor) : null,
-    cliente: cliente != null ? String(cliente) : null,
-    total: total != null && !Number.isNaN(Number(total)) ? Number(total) : null,
-    fecha: fecha != null ? String(fecha) : null,
-  };
+  const resumen = construirResumen(req.body);
 
   // Actualización
   if (id) {
@@ -129,6 +135,90 @@ cotizacionesRouter.post("/:tipo", async (req, res) => {
 
   await registrarFrases(tipo, data);
   res.status(201).json(created);
+});
+
+// POST /api/cotizaciones/:tipo/:id/version  { data, ...resumen }
+// Archiva la versión actual de `id` como snapshot y deja los datos recibidos
+// como la versión nueva (misma fila, mismo número, version + 1). No consume
+// folio. Así la cotización viva es siempre la última versión.
+cotizacionesRouter.post("/:tipo/:id/version", async (req, res) => {
+  const tipo = parseTipo(req.params.tipo);
+  if (!tipo) {
+    res.status(400).json({ error: "Tipo de cotización inválido." });
+    return;
+  }
+  const { data } = req.body ?? {};
+  if (data === undefined || data === null) {
+    res.status(400).json({ error: "Falta el campo 'data'." });
+    return;
+  }
+
+  const origen = await prisma.cotizacion.findUnique({
+    where: { id: req.params.id },
+  });
+  if (!origen || origen.tipo !== tipo) {
+    res.status(404).json({ error: "Cotización no encontrada." });
+    return;
+  }
+
+  const actualizada = await prisma.$transaction(async (tx) => {
+    // 1) Archiva el estado actual (aún sin los cambios) como versión histórica.
+    await tx.versionCotizacion.create({
+      data: {
+        cotizacionId: origen.id,
+        version: origen.version,
+        nombre: origen.nombre,
+        autor: origen.autor,
+        cliente: origen.cliente,
+        total: origen.total,
+        fecha: origen.fecha,
+        data: origen.data as Prisma.InputJsonValue,
+      },
+    });
+    // 2) La fila viva pasa a ser la versión nueva con los datos recibidos.
+    return tx.cotizacion.update({
+      where: { id: origen.id },
+      data: {
+        version: origen.version + 1,
+        data: data as Prisma.InputJsonValue,
+        ...construirResumen(req.body),
+      },
+    });
+  });
+
+  await registrarFrases(tipo, data);
+  res.status(201).json(actualizada);
+});
+
+// GET /api/cotizaciones/:tipo/:id/versiones -> versiones anteriores (metadatos)
+cotizacionesRouter.get("/:tipo/:id/versiones", async (req, res) => {
+  const versiones = await prisma.versionCotizacion.findMany({
+    where: { cotizacionId: req.params.id },
+    orderBy: { version: "desc" },
+    select: {
+      id: true,
+      version: true,
+      nombre: true,
+      autor: true,
+      cliente: true,
+      total: true,
+      fecha: true,
+      createdAt: true,
+    },
+  });
+  res.json(versiones);
+});
+
+// GET /api/cotizaciones/:tipo/version/:versionId -> datos de un snapshot
+cotizacionesRouter.get("/:tipo/version/:versionId", async (req, res) => {
+  const v = await prisma.versionCotizacion.findUnique({
+    where: { id: req.params.versionId },
+  });
+  if (!v) {
+    res.status(404).json({ error: "Versión no encontrada." });
+    return;
+  }
+  res.json(v);
 });
 
 // PATCH /api/cotizaciones/:tipo/:id/estado  { estado, motivoRechazo? }
