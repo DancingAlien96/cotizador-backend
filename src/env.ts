@@ -15,4 +15,9 @@ export const env = {
   corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
   jwtSecret: required("JWT_SECRET", "dev-insecure-jwt-secret-change-me"),
   databaseUrl: process.env.DATABASE_URL ?? "",
+  // Inventario externo (SoluPOS). La llave nunca sale del backend.
+  soluposUrl:
+    process.env.SOLUPOS_API_URL ??
+    "https://promesa.soluticgt.com/index.php/api/v1",
+  soluposKey: process.env.SOLUPOS_API_KEY ?? "",
 };
